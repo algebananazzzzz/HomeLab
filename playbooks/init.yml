@@ -1,0 +1,7 @@
+---
+- name: Initial server check
+  hosts: home
+  become: true
+
+  roles:
+    - init

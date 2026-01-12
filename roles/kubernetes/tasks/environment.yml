@@ -1,0 +1,42 @@
+---
+- name: Wait for kubeconfig to be created
+  ansible.builtin.wait_for:
+    path: /etc/rancher/k3s/k3s.yaml
+    timeout: "{{ k3s_kubeconfig_wait_seconds | default(180) }}"
+    sleep: 5
+
+- name: Set system-wide KUBECONFIG for bash
+  ansible.builtin.copy:
+    dest: /etc/profile.d/kubeconfig.sh
+    content: "export KUBECONFIG=/etc/rancher/k3s/k3s.yaml\n"
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Set KUBECONFIG for SSH user bashrc
+  ansible.builtin.lineinfile:
+    path: "{{ ansible_user_dir }}/.bashrc"
+    line: "export KUBECONFIG=/etc/rancher/k3s/k3s.yaml"
+    create: true
+    mode: "0644"
+
+- name: Set KUBECONFIG for root bashrc
+  ansible.builtin.lineinfile:
+    path: /root/.bashrc
+    line: "export KUBECONFIG=/etc/rancher/k3s/k3s.yaml"
+    create: true
+    mode: "0644"
+
+- name: Set KUBECONFIG for SSH user bash profile
+  ansible.builtin.lineinfile:
+    path: "{{ ansible_user_dir }}/.bash_profile"
+    line: "export KUBECONFIG=/etc/rancher/k3s/k3s.yaml"
+    create: true
+    mode: "0644"
+
+- name: Set KUBECONFIG for root bash profile
+  ansible.builtin.lineinfile:
+    path: /root/.bash_profile
+    line: "export KUBECONFIG=/etc/rancher/k3s/k3s.yaml"
+    create: true
+    mode: "0644"

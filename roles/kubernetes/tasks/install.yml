@@ -1,0 +1,27 @@
+---
+- name: Ensure curl is installed
+  ansible.builtin.package:
+    name: curl
+    state: present
+
+- name: Check if K3s is installed
+  ansible.builtin.stat:
+    path: /usr/local/bin/k3s
+  register: k3s_bin
+
+- name: Install K3s server
+  ansible.builtin.shell: |
+    curl -sfL https://get.k3s.io | sh -
+  environment:
+    INSTALL_K3S_EXEC: "server {{ k3s_server_args }}"
+    INSTALL_K3S_VERSION: "{{ k3s_version | default('') }}"
+  args:
+    executable: /bin/bash
+    creates: /usr/local/bin/k3s
+  when: not k3s_bin.stat.exists
+
+- name: Ensure K3s service is enabled and running
+  ansible.builtin.service:
+    name: k3s
+    enabled: true
+    state: started

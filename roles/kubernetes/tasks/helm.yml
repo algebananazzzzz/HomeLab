@@ -1,0 +1,26 @@
+---
+- name: Ensure curl is installed
+  ansible.builtin.package:
+    name: curl
+    state: present
+
+- name: Check if Helm is installed
+  ansible.builtin.stat:
+    path: /usr/local/bin/helm
+  register: helm_bin
+
+- name: Download Helm install script
+  ansible.builtin.get_url:
+    url: https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
+    dest: /usr/local/src/get-helm-3.sh
+    mode: "0755"
+    force: false
+  when: not helm_bin.stat.exists
+
+- name: Install Helm
+  ansible.builtin.command: /usr/local/src/get-helm-3.sh
+  environment:
+    HELM_VERSION: "{{ ((helm_version | default('')) | length > 0) | ternary(helm_version, omit) }}"
+  args:
+    creates: /usr/local/bin/helm
+  when: not helm_bin.stat.exists

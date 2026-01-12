@@ -1,0 +1,15 @@
+---
+- name: Install K3s and configure kubectl
+  hosts: home
+  become: true
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+
+  vars:
+    k3s_version: ""
+    k3s_server_args: "--snapshotter=native --write-kubeconfig-mode 644"
+    helm_version: ""
+    argocd_chart_version: ""
+
+  roles:
+    - kubernetes

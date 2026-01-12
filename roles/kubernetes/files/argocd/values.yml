@@ -1,0 +1,12 @@
+server:
+  insecure: true
+  ingress:
+    enabled: true
+  rootpath: /argocd
+  basehref: /argocd
+
+configs:
+  params:
+    server.rootpath: /argocd
+    server.basehref: /argocd
+    server.insecure: "true"

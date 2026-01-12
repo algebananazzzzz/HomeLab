@@ -1,0 +1,80 @@
+---
+- name: List Helm repo
+  ansible.builtin.command: helm repo list
+  register: helm_repo_list
+  changed_when: false
+
+- name: Add Argo Helm repo
+  ansible.builtin.command: helm repo add argo https://argoproj.github.io/argo-helm
+  register: argocd_repo_add
+  changed_when: "'has been added' in argocd_repo_add.stdout"
+  when: "'argo' not in helm_repo_list.stdout"
+
+- name: Update Helm repos
+  ansible.builtin.command: helm repo update
+  changed_when: false
+  when: argocd_repo_add is defined and argocd_repo_add.changed
+
+- name: Check Argo CD release version
+  ansible.builtin.command: helm list -n argocd -f '^argocd$' -o json
+  register: argocd_list
+  failed_when: false
+  changed_when: false
+
+- name: Parse Argo CD release version
+  ansible.builtin.set_fact:
+    argocd_installed: "{{ (argocd_list.stdout | default('[]') | from_json | length) > 0 }}"
+    argocd_current_version: >-
+      {{
+        (argocd_list.stdout | default('[]') | from_json | first | default({})).chart
+        | default('')
+        | regex_replace('^argo-cd-', '')
+      }}
+
+- name: Decide if Argo CD install/upgrade is needed
+  ansible.builtin.set_fact:
+    argocd_needs_install: >-
+      {{
+        (argocd_chart_version | default('') | length > 0 and argocd_current_version != argocd_chart_version)
+        or (argocd_chart_version | default('') | length == 0 and not argocd_installed)
+      }}
+
+- name: Copy Argo CD values file
+  ansible.builtin.copy:
+    src: "{{ role_path }}/files/argocd/values.yml"
+    dest: /tmp/argocd-values.yml
+    mode: "0644"
+
+- name: Install Argo CD via Helm
+  ansible.builtin.command: >
+    helm upgrade --install argocd argo/argo-cd
+    --namespace argocd
+    --create-namespace
+    -f /tmp/argocd-values.yml
+    {{ (argocd_chart_version | default('') | length > 0) | ternary('--version ' ~ argocd_chart_version, '') }}
+  when: argocd_needs_install
+
+- name: Wait for Argo CD server to be available
+  ansible.builtin.command: kubectl wait -n argocd --for=condition=Available deployment/argocd-server --timeout=180s
+  changed_when: false
+
+- name: Check Argo CD IngressRoute
+  ansible.builtin.command: kubectl get ingressroute argocd-server -n argocd
+  register: argocd_ingressroute
+  failed_when: false
+  changed_when: false
+
+- name: Copy Argo CD Traefik IngressRoute manifest
+  ansible.builtin.copy:
+    src: "{{ role_path }}/files/argocd/ingressroute.yml"
+    dest: /tmp/argocd-ingressroute.yml
+    mode: "0644"
+  when: argocd_ingressroute.rc != 0
+
+- name: Apply Argo CD Traefik IngressRoute
+  ansible.builtin.command: kubectl apply -f /tmp/argocd-ingressroute.yml
+  when: argocd_ingressroute.rc != 0
+
+- name: Show Argo CD admin password command
+  ansible.builtin.debug:
+    msg: "Get the initial admin password with: kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' | base64 -d && echo"
