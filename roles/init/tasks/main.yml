@@ -1,9 +1,0 @@
----
-- name: Ping the server
-  ansible.builtin.ping:
-
-- name: Touch init marker
-  ansible.builtin.file:
-    path: /tmp/ansible_init_marker
-    state: touch
-    mode: "0644"

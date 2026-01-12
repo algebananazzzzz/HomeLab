@@ -1,0 +1,27 @@
+---
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: mediaserver
+  namespace: argocd
+spec:
+  description: Media apps managed by Argo CD
+  sourceRepos:
+    - https://github.com/algebananazzzzz/HomeLab.git
+  destinations:
+    - namespace: media
+      server: https://kubernetes.default.svc
+  clusterResourceWhitelist:
+    - group: ""
+      kind: Namespace
+  namespaceResourceWhitelist:
+    - group: ""
+      kind: ConfigMap
+    - group: ""
+      kind: PersistentVolumeClaim
+    - group: ""
+      kind: Service
+    - group: apps
+      kind: Deployment
+    - group: traefik.io
+      kind: IngressRoute
