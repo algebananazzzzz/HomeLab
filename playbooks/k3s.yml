@@ -51,30 +51,10 @@
         group: root
         mode: "0644"
 
-    - name: Set KUBECONFIG for SSH user bashrc
+    - name: Set KUBECONFIG for all login sessions
       ansible.builtin.lineinfile:
-        path: "{{ ansible_user_dir }}/.bashrc"
-        line: "export KUBECONFIG=/etc/rancher/k3s/k3s.yaml"
-        create: true
-        mode: "0644"
-
-    - name: Set KUBECONFIG for root bashrc
-      ansible.builtin.lineinfile:
-        path: /root/.bashrc
-        line: "export KUBECONFIG=/etc/rancher/k3s/k3s.yaml"
-        create: true
-        mode: "0644"
-
-    - name: Set KUBECONFIG for SSH user bash profile
-      ansible.builtin.lineinfile:
-        path: "{{ ansible_user_dir }}/.bash_profile"
-        line: "export KUBECONFIG=/etc/rancher/k3s/k3s.yaml"
-        create: true
-        mode: "0644"
-
-    - name: Set KUBECONFIG for root bash profile
-      ansible.builtin.lineinfile:
-        path: /root/.bash_profile
-        line: "export KUBECONFIG=/etc/rancher/k3s/k3s.yaml"
+        path: /etc/environment
+        regexp: '^KUBECONFIG='
+        line: 'KUBECONFIG=/etc/rancher/k3s/k3s.yaml'
         create: true
         mode: "0644"

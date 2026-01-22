@@ -13,6 +13,7 @@
       ansible.builtin.command: helm repo list
       register: helm_repo_list
       changed_when: false
+      failed_when: helm_repo_list.rc not in [0, 1]
 
     - name: Add Argo Helm repo
       ansible.builtin.command: helm repo add argo https://argoproj.github.io/argo-helm
@@ -26,26 +27,31 @@
       when: argocd_repo_add is defined and argocd_repo_add.changed
 
     - name: Check Argo CD release version
-      ansible.builtin.command: helm list -n argocd -f '^argocd$' -o json
+      ansible.builtin.command: helm list -n argocd -f '^argocd$' -o json --all
       register: argocd_list
       failed_when: false
       changed_when: false
 
     - name: Parse Argo CD release version
       ansible.builtin.set_fact:
-        argocd_installed: "{{ (argocd_list.stdout | default('[]') | from_json | length) > 0 }}"
+        argocd_release: "{{ (argocd_list.stdout | default('[]') | from_json | first | default({})) }}"
+
+    - name: Parse Argo CD release version details
+      ansible.builtin.set_fact:
+        argocd_installed: "{{ argocd_release | length > 0 }}"
+        argocd_release_deployed: "{{ (argocd_release.status | default('')) == 'deployed' }}"
         argocd_current_version: >-
           {{
-            (argocd_list.stdout | default('[]') | from_json | first | default({})).chart
-            | default('')
-            | regex_replace('^argo-cd-', '')
+            ((argocd_release.status | default('')) == 'deployed')
+            | ternary((argocd_release.chart | default('') | regex_replace('^argo-cd-', '')), '')
           }}
 
     - name: Decide if Argo CD install/upgrade is needed
       ansible.builtin.set_fact:
         argocd_needs_install: >-
           {{
-            (argocd_chart_version | default('') | length > 0 and argocd_current_version != argocd_chart_version)
+            (not argocd_release_deployed)
+            or (argocd_chart_version | default('') | length > 0 and argocd_current_version != argocd_chart_version)
             or (argocd_chart_version | default('') | length == 0 and not argocd_installed)
           }}
 
