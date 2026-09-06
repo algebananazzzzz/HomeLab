@@ -58,3 +58,20 @@
         line: 'KUBECONFIG=/etc/rancher/k3s/k3s.yaml'
         create: true
         mode: "0644"
+
+    - name: Patch Traefik to run on host network (single node)
+      ansible.builtin.command: >
+        kubectl -n kube-system patch deployment traefik
+        --type='merge'
+        -p '{
+          "spec": {
+            "template": {
+              "spec": {
+                "hostNetwork": true,
+                "dnsPolicy": "ClusterFirstWithHostNet"
+              }
+            }
+          }
+        }'
+      register: traefik_patch
+      changed_when: "'patched' in traefik_patch.stdout or traefik_patch.rc == 0"
